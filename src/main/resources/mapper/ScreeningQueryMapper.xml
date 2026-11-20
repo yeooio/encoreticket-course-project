@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.ScreeningQueryMapper">
+    <resultMap id="Projection" type="io.github.chenforegone.encoreticket.model.query.ScreeningProjection">
+        <id column="id" property="id"/>
+        <result column="movie_id" property="movieId"/>
+        <result column="hall_id" property="hallId"/>
+        <result column="price" property="price"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="admission_open_time" property="admissionOpenTime"/>
+        <result column="sale_start_time" property="saleStartTime"/>
+        <result column="sale_end_time" property="saleEndTime"/>
+        <result column="duration_minutes_snapshot" property="durationMinutesSnapshot"/>
+        <result column="turnaround_minutes_snapshot" property="turnaroundMinutesSnapshot"/>
+        <result column="status" property="status" javaType="io.github.chenforegone.encoreticket.model.enums.ScreeningStatus"/>
+        <result column="version" property="version"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="movie_title" property="movieTitle"/>
+        <result column="hall_name" property="hallName"/>
+        <result column="movie_status" property="movieStatus" javaType="io.github.chenforegone.encoreticket.model.enums.MovieStatus"/>
+        <result column="hall_status" property="hallStatus" javaType="io.github.chenforegone.encoreticket.model.enums.HallStatus"/>
+    </resultMap>
+    <resultMap id="SeatProjection" type="io.github.chenforegone.encoreticket.model.query.ScreeningSeatProjection">
+        <id column="id" property="id"/>
+        <result column="seat_id" property="seatId"/>
+        <result column="row_number" property="rowNumber"/>
+        <result column="seat_number" property="seatNumber"/>
+        <result column="status" property="status" javaType="io.github.chenforegone.encoreticket.model.enums.ScreeningSeatStatus"/>
+    </resultMap>
+    <sql id="Columns">
+        s.id, s.movie_id, s.hall_id, s.price, s.start_time, s.end_time, s.admission_open_time,
+        s.sale_start_time, s.sale_end_time, s.duration_minutes_snapshot,
+        s.turnaround_minutes_snapshot, s.status, s.version, s.create_time, s.update_time,
+        m.title AS movie_title, h.hall_name AS hall_name, m.status AS movie_status, h.status AS hall_status
+    </sql>
+    <sql id="Joins">
+        FROM screening s LEFT JOIN movie m ON m.id = s.movie_id LEFT JOIN hall h ON h.id = s.hall_id
+    </sql>
+    <sql id="PublicVisibility">
+        m.status = 0 AND h.status = 0 AND s.status IN (0, 1) AND s.sale_end_time &gt; #{now}
+    </sql>
+    <sql id="Filters">
+        <if test="q.movieId != null">AND s.movie_id = #{q.movieId}</if>
+        <if test="q.hallId != null">AND s.hall_id = #{q.hallId}</if>
+        <if test="q.status != null">AND s.status = #{q.status}</if>
+        <if test="q.dateFrom != null">AND s.start_time &gt;= #{q.dateFrom}</if>
+        <if test="q.dateTo != null">AND s.start_time &lt; #{q.dateTo}</if>
+        <if test="q.startTimeFrom != null">AND s.start_time &gt;= #{q.startTimeFrom}</if>
+        <if test="q.startTimeTo != null">AND s.start_time &lt; #{q.startTimeTo}</if>
+        <if test="q.saleStartTimeFrom != null">AND s.sale_start_time &gt;= #{q.saleStartTimeFrom}</if>
+        <if test="q.saleStartTimeTo != null">AND s.sale_start_time &lt; #{q.saleStartTimeTo}</if>
+        <if test="q.saleEndTimeFrom != null">AND s.sale_end_time &gt;= #{q.saleEndTimeFrom}</if>
+        <if test="q.saleEndTimeTo != null">AND s.sale_end_time &lt; #{q.saleEndTimeTo}</if>
+    </sql>
+    <sql id="AdminOrdering">
+        ORDER BY
+        <choose>
+            <when test="q.sortBy == 'createTime'">s.create_time</when>
+            <when test="q.sortBy == 'saleStartTime'">s.sale_start_time</when>
+            <when test="q.sortBy == 'saleEndTime'">s.sale_end_time</when>
+            <otherwise>s.start_time</otherwise>
+        </choose>
+        <choose><when test="q.sortOrder == 'desc'">DESC</when><otherwise>ASC</otherwise></choose>,
+        s.id <choose><when test="q.sortOrder == 'desc'">DESC</when><otherwise>ASC</otherwise></choose>
+    </sql>
+    <select id="countPublic" resultType="long">
+        SELECT COUNT(*) <include refid="Joins"/> WHERE <include refid="PublicVisibility"/> <include refid="Filters"/>
+    </select>
+    <select id="selectPublic" resultMap="Projection">
+        SELECT <include refid="Columns"/> <include refid="Joins"/>
+        WHERE <include refid="PublicVisibility"/> <include refid="Filters"/>
+        ORDER BY s.start_time ASC, s.id ASC LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="findPublic" resultMap="Projection">
+        SELECT <include refid="Columns"/> <include refid="Joins"/>
+        WHERE s.id = #{id} AND <include refid="PublicVisibility"/>
+    </select>
+    <select id="countAdmin" resultType="long">
+        SELECT COUNT(*) FROM screening s WHERE 1 = 1 <include refid="Filters"/>
+    </select>
+    <select id="selectAdmin" resultMap="Projection">
+        SELECT <include refid="Columns"/> <include refid="Joins"/>
+        WHERE 1 = 1 <include refid="Filters"/> <include refid="AdminOrdering"/>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="findAdmin" resultMap="Projection">
+        SELECT <include refid="Columns"/> <include refid="Joins"/> WHERE s.id = #{id}
+    </select>
+    <select id="selectSeats" resultMap="SeatProjection">
+        SELECT ss.id, ss.seat_id, st.row_number, st.seat_number, ss.status
+        FROM screening_seat ss INNER JOIN seat st ON st.id = ss.seat_id
+        INNER JOIN screening s ON s.id = ss.screening_id AND st.hall_id = s.hall_id
+        WHERE ss.screening_id = #{screeningId} AND st.status = 0 AND ss.status != 3
+        ORDER BY st.row_number ASC, st.seat_number ASC, ss.id ASC
+    </select>
+</mapper>
+
+

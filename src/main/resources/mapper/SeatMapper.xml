@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.SeatMapper">
+    <select id="enabledInHall" resultType="io.github.chenforegone.encoreticket.model.entity.Seat">
+        SELECT * FROM seat WHERE hall_id = #{hallId} AND status = 0 ORDER BY id
+    </select>
+    <select id="allInHall" resultType="io.github.chenforegone.encoreticket.model.entity.Seat">
+        SELECT st.* FROM seat st WHERE st.hall_id = #{hallId}
+        ORDER BY st.row_number, st.seat_number, st.id
+    </select>
+    <select id="activeOccupancy" resultType="io.github.chenforegone.encoreticket.mapper.SeatMapper$Occupancy">
+        SELECT DISTINCT ss.seat_id, ss.status
+        FROM screening s JOIN screening_seat ss ON ss.screening_id = s.id
+        WHERE s.hall_id = #{hallId} AND s.status NOT IN (3, 4) AND s.end_time &gt; #{now}
+          AND ss.status IN (1, 2)
+    </select>
+</mapper>

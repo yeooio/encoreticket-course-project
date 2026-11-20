@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('course-docs/报告图/数据库核心实体关系图.svg');s=p.read_text(encoding='utf-8-sig');s=s.replace('M850 615 V720 M1225 390 V495 M1225 615 V720','M850 615 V720 M1225 390 V495 M960 300 H1040 V680 H1225 V720');s=s.replace('<text x="1237" y="670">1 → 0..1</text>','');s=s.replace('支付 / 退款','支付 payment').replace('payment · refund','PK id · order_id').replace('详见关联说明','退款关联支付记录');s=s.replace('1 → 0..1</text><text x="1237" y="445"','1 → 0..1</text><text x="1237" y="445"');s=s.replace('具体基数及支付、退款关系见文字说明。','支付及退款的基数见配套文字说明。');p.write_text(s,encoding='utf-8')

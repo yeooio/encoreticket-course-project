@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.ScreeningLifecycleMapper">
+
+    <resultMap id="CandidateResultMap"
+               type="io.github.chenforegone.encoreticket.mapper.ScreeningLifecycleMapper$Candidate">
+        <constructor>
+            <idArg column="id" name="id" javaType="java.lang.Long"/>
+            <arg column="candidate_time" name="candidateTime" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectEndedCandidates" resultMap="CandidateResultMap">
+        SELECT id, end_time AS candidate_time FROM screening
+        WHERE status IN (0, 1, 2) AND end_time &lt;= #{now}
+        <if test="afterTime != null">
+            AND (end_time &gt; #{afterTime} OR (end_time = #{afterTime} AND id &gt; #{afterId}))
+        </if>
+        ORDER BY end_time, id LIMIT #{limit}
+    </select>
+
+    <select id="selectOffSaleCandidates" resultMap="CandidateResultMap">
+        SELECT id, sale_end_time AS candidate_time FROM screening
+        WHERE status IN (0, 1) AND sale_end_time &lt;= #{now} AND end_time &gt; #{now}
+        <if test="afterTime != null">
+            AND (sale_end_time &gt; #{afterTime} OR (sale_end_time = #{afterTime} AND id &gt; #{afterId}))
+        </if>
+        ORDER BY sale_end_time, id LIMIT #{limit}
+    </select>
+
+    <select id="selectOnSaleCandidates" resultMap="CandidateResultMap">
+        SELECT s.id, s.sale_start_time AS candidate_time FROM screening s
+        JOIN movie m ON m.id = s.movie_id AND m.status = 0
+        JOIN hall h ON h.id = s.hall_id AND h.status = 0
+        WHERE s.status = 0 AND s.sale_start_time &lt;= #{now} AND s.sale_end_time &gt; #{now}
+          AND s.end_time &gt; #{now} AND DATE(s.start_time) &gt;= m.release_date
+          AND EXISTS (SELECT 1 FROM screening_seat ss
+                      JOIN seat st ON st.id = ss.seat_id AND st.hall_id = s.hall_id AND st.status = 0
+                      WHERE ss.screening_id = s.id AND ss.status = 0 AND ss.order_id IS NULL)
+        <if test="afterTime != null">
+            AND (s.sale_start_time &gt; #{afterTime}
+                 OR (s.sale_start_time = #{afterTime} AND s.id &gt; #{afterId}))
+        </if>
+        ORDER BY s.sale_start_time, s.id LIMIT #{limit}
+    </select>
+</mapper>

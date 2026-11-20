@@ -1,0 +1,13 @@
+package io.github.chenforegone.encoreticket.model.vo;
+
+
+/**
+ * 场次对外响应，与持久化实体隔离。
+ *
+ * @author c1342
+ */
+public record ScreeningCreatedVO(
+        String id
+) {
+}
+

@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: encore-ticket-backend
+  config:
+    import: "optional:file:./.env[.properties]"
+  mvc:
+    # Make unmatched routes use the same JSON error contract as controller errors.
+    throw-exception-if-no-handler-found: true
+  datasource:
+    # connectionTimeZone must stay UTC: technical times are Instant values stored as
+    # UTC wall-clock DATETIME, while business times use LocalDateTime and are never
+    # converted. See docs/adr/0005-time-semantics.md.
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3308}/${MYSQL_DATABASE:encore_ticket}?connectionTimeZone=UTC&characterEncoding=UTF-8
+    username: ${MYSQL_USER:encore_ticket}
+    password: ${MYSQL_PASSWORD}
+  flyway:
+    # Flyway is enabled by default now that the canonical schema has been
+    # baselined. Set FLYWAY_ENABLED=false only for an intentional read-only
+    # application process; versioned migrations live under classpath:db/migration.
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    # FLYWAY_BASELINE_ON_MIGRATE=true is only for the one-time existing-schema
+    # transition; keep it false for new databases and subsequent releases.
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: 1
+    create-schemas: false
+    clean-disabled: true
+    validate-on-migrate: true
+    fail-on-missing-locations: true
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD}
+      database: 0
+      connect-timeout: 5s
+      timeout: 3s
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+
+server:
+  port: 8080
+
+encore:
+  screening:
+    lifecycle-scheduler:
+      enabled: ${SCREENING_LIFECYCLE_SCHEDULER_ENABLED:true}
+      delay-ms: ${SCREENING_LIFECYCLE_DELAY_MS:60000}
+      batch-size: ${SCREENING_LIFECYCLE_BATCH_SIZE:100}
+  order:
+    expiration-scheduler:
+      enabled: ${ORDER_EXPIRATION_SCHEDULER_ENABLED:true}
+      delay-ms: ${ORDER_EXPIRATION_DELAY_MS:60000}
+      batch-size: ${ORDER_EXPIRATION_BATCH_SIZE:100}

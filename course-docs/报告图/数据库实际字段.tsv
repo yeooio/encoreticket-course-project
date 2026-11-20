@@ -1,0 +1,177 @@
+api_idempotency	operator_id	bigint	NO	PRI	
+api_idempotency	operation	varchar(64)	NO	PRI	
+api_idempotency	idempotency_key	varchar(128)	NO	PRI	
+api_idempotency	request_digest	char(64)	NO		
+api_idempotency	response_json	json	YES		
+api_idempotency	expires_at	datetime(6)	NO	MUL	
+flyway_schema_history	installed_rank	int	NO	PRI	
+flyway_schema_history	version	varchar(50)	YES		
+flyway_schema_history	description	varchar(200)	NO		
+flyway_schema_history	type	varchar(20)	NO		
+flyway_schema_history	script	varchar(1000)	NO		
+flyway_schema_history	checksum	int	YES		
+flyway_schema_history	installed_by	varchar(100)	NO		
+flyway_schema_history	installed_on	timestamp	NO		
+flyway_schema_history	execution_time	int	NO		
+flyway_schema_history	success	tinyint(1)	NO	MUL	
+hall	id	bigint	NO	PRI	影厅主键
+hall	hall_name	varchar(64)	NO		影厅名称
+hall	hall_no	varchar(32)	NO	UNI	影厅编号
+hall	status	tinyint	NO		影厅状态：0 启用，1 停用
+hall	schedule_version	bigint	NO		同影厅排片乐观锁版本
+hall	create_time	datetime	NO		创建时间
+hall	update_time	datetime	NO		最后更新时间
+hall	version	int	NO		影厅维护编辑版本
+movie	id	bigint	NO	PRI	电影主键
+movie	title	varchar(255)	NO	MUL	电影名称
+movie	description	text	YES		电影简介
+movie	release_date	date	NO		上映日期
+movie	duration_minutes	int	NO		影片播放时长（分钟）
+movie	publish_at	datetime	YES		系统自动发行时间，按 UTC 存储
+movie	status	tinyint	NO	MUL	电影状态：0 上架，1 下架
+movie	version	int	NO		乐观锁版本
+movie	create_time	datetime	NO		创建时间
+movie	update_time	datetime	NO		最后更新时间
+order_item	id	bigint	NO	PRI	订单明细主键
+order_item	order_id	bigint	NO	MUL	订单 ID，逻辑关联 orders.id
+order_item	screening_seat_id	bigint	NO		场次座位 ID，逻辑关联 screening_seat.id
+order_item	unit_price	decimal(10,2)	NO		购票时的单价快照
+order_item	create_time	datetime	NO		创建时间
+order_item	update_time	datetime	NO		最后更新时间
+orders	id	bigint	NO	PRI	订单主键
+orders	order_no	varchar(32)	NO	UNI	订单业务编号
+orders	user_id	bigint	NO	MUL	下单用户 ID，逻辑关联 sys_user.id
+orders	screening_id	bigint	NO	MUL	场次 ID，逻辑关联 screening.id
+orders	total_amount	decimal(10,2)	NO		订单总金额
+orders	expires_at	datetime	NO		实际支付截止（UTC）：下单后15分钟与场次售票截止取早；不回写历史订单
+orders	status	tinyint	NO	MUL	订单状态：0 待支付，1 已支付，2 已取消，3 已过期，4 退款中，5 已退款
+orders	version	int	NO		订单乐观锁版本
+orders	create_time	datetime	NO		创建时间
+orders	update_time	datetime	NO		最后更新时间
+payment	id	bigint	NO	PRI	支付记录主键
+payment	payment_no	varchar(64)	NO	UNI	支付业务编号
+payment	order_id	bigint	NO	MUL	订单 ID，逻辑关联 orders.id
+payment	amount	decimal(10,2)	NO		支付金额
+payment	currency	char(3)	NO		支付币种
+payment	status	tinyint	NO		支付状态：0 待支付，1 支付成功，2 支付失败
+payment	version	int	NO		支付乐观锁版本
+payment	attempt_id	varchar(64)	NO	MUL	当前支付渠道尝试标识
+payment	successful_order_id	bigint	YES	UNI	成功支付对应订单，用于唯一约束
+payment	create_time	datetime	NO		创建时间
+payment	update_time	datetime	NO		最后更新时间
+payment_audit	id	bigint	NO	PRI	
+payment_audit	payment_id	bigint	NO	MUL	
+payment_audit	order_id	bigint	NO	MUL	
+payment_audit	operator_id	bigint	YES		
+payment_audit	operation	varchar(64)	NO		
+payment_audit	from_status	tinyint	YES		
+payment_audit	to_status	tinyint	YES		
+payment_audit	source	varchar(32)	NO		
+payment_audit	request_id	varchar(64)	YES		
+payment_audit	event_id	varchar(128)	YES		
+payment_audit	remark	varchar(255)	YES		
+payment_audit	create_time	datetime	NO		
+payment_notification	id	bigint	NO	PRI	
+payment_notification	provider	varchar(32)	NO	MUL	
+payment_notification	event_id	varchar(128)	NO		
+payment_notification	payment_no	varchar(64)	NO	MUL	
+payment_notification	event_type	varchar(32)	NO		
+payment_notification	payload_hash	binary(32)	NO		
+payment_notification	processed_at	datetime	NO		
+payment_notification	create_time	datetime	NO		
+payment_notification	attempt_id	varchar(64)	NO	MUL	渠道通知对应的支付尝试
+refund	id	bigint	NO	PRI	退款记录主键
+refund	refund_no	varchar(64)	NO	UNI	退款业务编号
+refund	order_id	bigint	NO	MUL	订单 ID，逻辑关联 orders.id
+refund	payment_id	bigint	NO	UNI	支付记录 ID，逻辑关联 payment.id
+refund	amount	decimal(10,2)	NO		退款金额
+refund	status	tinyint	NO	MUL	退款状态：0 待处理，1 退款成功，2 退款失败
+refund	create_time	datetime	NO		创建时间
+refund	update_time	datetime	NO		最后更新时间
+refund	source	varchar(24)	NO		
+refund	attempt_no	int	NO		
+refund	next_run_at	datetime(6)	YES		
+refund	lease_token	varchar(64)	YES		
+refund	lease_until	datetime(6)	YES		
+refund_attempt	refund_id	bigint	NO	PRI	
+refund_attempt	attempt_no	int	NO	PRI	
+refund_attempt	status	varchar(16)	NO		
+refund_attempt	submitted	tinyint(1)	NO		
+refund_attempt	create_time	datetime(6)	NO		
+refund_attempt	update_time	datetime(6)	NO		
+refund_audit	id	bigint	NO	PRI	
+refund_audit	refund_id	bigint	NO	MUL	
+refund_audit	operation	varchar(64)	NO		
+refund_audit	operator_id	bigint	YES		
+refund_audit	create_time	datetime(6)	NO		
+refund_simulated_result	refund_no	varchar(64)	NO	PRI	
+refund_simulated_result	attempt_no	int	NO	PRI	
+refund_simulated_result	payment_no	varchar(64)	NO		
+refund_simulated_result	amount	decimal(10,2)	NO		
+refund_simulated_result	result	varchar(16)	NO		
+refund_simulated_result	create_time	datetime(6)	NO		
+refund_simulated_result	successful_refund_no	varchar(64)	YES	UNI	
+role	id	bigint	NO	PRI	角色主键，由应用生成
+role	role_code	varchar(50)	NO	UNI	角色编码，例如 ADMIN、CHECKIN_STAFF
+role	role_name	varchar(50)	NO	UNI	角色名称
+role	role_desc	varchar(255)	YES		角色描述
+role	create_time	datetime	NO		创建时间
+role	update_time	datetime	NO		最后更新时间
+screening	id	bigint	NO	PRI	场次主键
+screening	price	decimal(10,2)	NO		场次单张票价
+screening	movie_id	bigint	NO	MUL	电影 ID，逻辑关联 movie.id
+screening	hall_id	bigint	NO	MUL	影厅 ID，逻辑关联 hall.id
+screening	start_time	datetime	NO		放映开始时间
+screening	end_time	datetime	NO		放映结束时间
+screening	duration_minutes_snapshot	int	NO		排片时片长快照（分钟）
+screening	turnaround_minutes_snapshot	int	NO		场间周转时间快照（分钟）
+screening	sale_start_time	datetime	NO		开始售票时间
+screening	sale_end_time	datetime	NO		停止售票时间
+screening	admission_open_time	datetime	NO		允许入场时间，影院 Asia/Shanghai 业务时间
+screening	status	tinyint	NO	MUL	场次状态：0 待开售，1 开售，2 停售，3 关闭，4 已结束
+screening	version	int	NO		
+screening	create_time	datetime	NO		创建时间
+screening	update_time	datetime	NO		最后更新时间
+screening_seat	id	bigint	NO	PRI	场次座位主键
+screening_seat	seat_id	bigint	NO		物理座位 ID，逻辑关联 seat.id
+screening_seat	screening_id	bigint	NO	MUL	场次 ID，逻辑关联 screening.id
+screening_seat	status	tinyint	NO		场次座位状态：0 可售，1 占用，2 已售，3 禁售
+screening_seat	order_id	bigint	YES	MUL	占用或售出该座位的订单 ID，逻辑关联 orders.id
+screening_seat	create_time	datetime	NO		创建时间
+screening_seat	update_time	datetime	NO		最后更新时间
+seat	id	bigint	NO	PRI	物理座位主键
+seat	hall_id	bigint	NO	MUL	影厅 ID，逻辑关联 hall.id
+seat	row_number	int	NO		座位排号，从 1 开始
+seat	seat_number	int	NO		排内座位号，从 1 开始
+seat	status	tinyint	NO		座位状态：0 启用，1 停用
+seat	create_time	datetime	NO		创建时间
+seat	update_time	datetime	NO		最后更新时间
+seat	version	int	NO		物理座位维护编辑版本
+sys_user	id	bigint	NO	PRI	用户主键，由应用生成
+sys_user	username	varchar(64)	NO	UNI	登录用户名
+sys_user	password	varchar(255)	NO		密码密文，不保存明文
+sys_user	nickname	varchar(64)	YES		用户昵称
+sys_user	avatar	varchar(255)	YES		头像地址
+sys_user	email	varchar(128)	YES	UNI	电子邮箱
+sys_user	phone	varchar(32)	YES	UNI	手机号码
+sys_user	status	tinyint	NO		用户状态：0 正常，1 禁用
+sys_user	create_time	datetime	NO		创建时间
+sys_user	update_time	datetime	NO		最后更新时间
+sys_user	auth_version	bigint	NO		登录态版本
+ticket	id	bigint	NO	PRI	票券主键
+ticket	status	tinyint	NO		票券状态：0 有效，1 已核销，2 已作废
+ticket	order_item_id	bigint	NO	UNI	订单明细 ID，逻辑关联 order_item.id
+ticket	ticket_code	varchar(128)	NO	UNI	票券码，供用户扫码入场
+ticket	create_time	datetime	NO		创建时间
+ticket	update_time	datetime	NO		最后更新时间
+ticket_verification	id	bigint	NO	PRI	核销记录主键
+ticket_verification	ticket_id	bigint	NO	UNI	票券 ID，逻辑关联 ticket.id
+ticket_verification	operator_id	bigint	NO		核销人员 ID，逻辑关联 sys_user.id
+ticket_verification	device_code	varchar(64)	NO		扫码设备编号，不关联独立设备表
+ticket_verification	verified_at	datetime	NO	MUL	实际核销时间
+ticket_verification	create_time	datetime	NO		核销记录创建时间
+user_role	id	bigint	NO	PRI	用户角色关系主键
+user_role	user_id	bigint	NO	MUL	用户 ID，逻辑关联 sys_user.id
+user_role	role_id	bigint	NO	MUL	角色 ID，逻辑关联 role.id
+user_role	create_time	datetime	NO		创建时间
+user_role	update_time	datetime	NO		最后更新时间

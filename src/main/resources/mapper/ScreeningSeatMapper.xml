@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.ScreeningSeatMapper">
+    <insert id="insertSeats">
+        INSERT INTO screening_seat (id, seat_id, screening_id, status, create_time, update_time) VALUES
+        <foreach collection="seats" item="seat" separator=",">
+            (#{seat.id}, #{seat.seatId}, #{seat.screeningId}, 0, #{seat.createTime}, #{seat.updateTime})
+        </foreach>
+    </insert>
+    <delete id="deleteForScreening">
+        DELETE FROM screening_seat WHERE screening_id = #{screeningId}
+    </delete>
+</mapper>

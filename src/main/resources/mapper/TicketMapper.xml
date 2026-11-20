@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.TicketMapper">
+    <resultMap id="TicketProjectionMap" type="io.github.chenforegone.encoreticket.model.query.TicketProjection">
+        <constructor>
+            <idArg column="id" javaType="java.lang.Long"/>
+            <arg column="order_item_id" javaType="java.lang.Long"/>
+            <arg column="order_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="movie_id" javaType="java.lang.Long"/>
+            <arg column="screening_id" javaType="java.lang.Long"/>
+            <arg column="hall_id" javaType="java.lang.Long"/>
+            <arg column="screening_seat_id" javaType="java.lang.Long"/>
+            <arg column="seat_id" javaType="java.lang.Long"/>
+            <arg column="ticket_code" javaType="java.lang.String"/>
+            <arg column="order_no" javaType="java.lang.String"/>
+            <arg column="movie_title" javaType="java.lang.String"/>
+            <arg column="hall_name" javaType="java.lang.String"/>
+            <arg column="ticket_status" javaType="java.lang.Integer"/>
+            <arg column="order_status" javaType="java.lang.Integer"/>
+            <arg column="row_number" javaType="java.lang.Integer"/>
+            <arg column="seat_number" javaType="java.lang.Integer"/>
+            <arg column="start_time" javaType="java.time.LocalDateTime"/>
+            <arg column="end_time" javaType="java.time.LocalDateTime"/>
+            <arg column="unit_price" javaType="java.math.BigDecimal"/>
+            <arg column="verified_at" javaType="java.time.Instant"/>
+            <arg column="created_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="projectionColumns">
+        t.id, oi.id AS order_item_id, o.id AS order_id, o.user_id,
+        m.id AS movie_id, s.id AS screening_id, h.id AS hall_id,
+        ss.id AS screening_seat_id, se.id AS seat_id, t.ticket_code,
+        o.order_no, m.title AS movie_title, h.hall_name,
+        t.status AS ticket_status, o.status AS order_status,
+        se.row_number, se.seat_number, s.start_time, s.end_time,
+        oi.unit_price, tv.verified_at, t.create_time AS created_at
+    </sql>
+
+    <sql id="ownedJoins">
+        FROM ticket t
+        LEFT JOIN order_item oi ON oi.id = t.order_item_id
+        LEFT JOIN orders o ON o.id = oi.order_id
+        LEFT JOIN screening s ON s.id = o.screening_id
+        LEFT JOIN movie m ON m.id = s.movie_id
+        LEFT JOIN hall h ON h.id = s.hall_id
+        LEFT JOIN screening_seat ss ON ss.id = oi.screening_seat_id AND ss.screening_id = s.id
+        LEFT JOIN seat se ON se.id = ss.seat_id AND se.hall_id = s.hall_id
+        LEFT JOIN ticket_verification tv ON tv.ticket_id = t.id
+    </sql>
+
+    <sql id="ownedScope">
+        o.user_id = #{filter.userId}
+    </sql>
+
+    <sql id="optionalFilters">
+        <if test="filter.movieTitlePrefix != null and filter.movieTitlePrefix != ''">
+            AND m.title LIKE CONCAT(
+                REPLACE(REPLACE(REPLACE(REPLACE(#{filter.movieTitlePrefix}, '!', '!!'), '%', '!%'), '_', '!_'), '\\', '!\\'),
+                '%'
+            ) ESCAPE '!'
+        </if>
+        <if test="filter.orderNo != null and filter.orderNo != ''">
+            AND o.order_no = #{filter.orderNo}
+        </if>
+    </sql>
+
+    <sql id="validData">
+        t.status IN (0, 1, 2)
+        AND o.status IN (0, 1, 2, 3, 4, 5)
+        AND (t.status &lt;&gt; 0 OR o.status IN (1, 4))
+        AND t.id IS NOT NULL
+        AND oi.id IS NOT NULL
+        AND o.id IS NOT NULL
+        AND s.id IS NOT NULL
+        AND m.id IS NOT NULL
+        AND h.id IS NOT NULL
+        AND ss.id IS NOT NULL
+        AND se.id IS NOT NULL
+        AND s.end_time IS NOT NULL
+    </sql>
+
+    <sql id="displayStatus">
+        <choose>
+            <when test="filter.status == null">
+                1 = 1
+            </when>
+            <when test="filter.status.name() == 'USED'">
+                t.status = 1
+            </when>
+            <when test="filter.status.name() == 'VOID'">
+                t.status = 2
+            </when>
+            <when test="filter.status.name() == 'REFUNDING'">
+                t.status = 0 AND o.status = 4
+            </when>
+            <when test="filter.status.name() == 'EXPIRED'">
+                t.status = 0 AND o.status &lt;&gt; 4 AND s.end_time &lt;= #{filter.now}
+            </when>
+            <when test="filter.status.name() == 'VALID'">
+                t.status = 0 AND o.status &lt;&gt; 4 AND s.end_time &gt; #{filter.now}
+            </when>
+        </choose>
+    </sql>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        <include refid="ownedJoins"/>
+        WHERE <include refid="ownedScope"/>
+          AND <include refid="validData"/>
+          AND <include refid="displayStatus"/>
+        <include refid="optionalFilters"/>
+    </select>
+
+    <select id="selectPage" resultMap="TicketProjectionMap">
+        SELECT <include refid="projectionColumns"/>
+        <include refid="ownedJoins"/>
+        WHERE <include refid="ownedScope"/>
+          AND <include refid="validData"/>
+          AND <include refid="displayStatus"/>
+        <include refid="optionalFilters"/>
+        ORDER BY s.start_time DESC, t.id DESC
+        LIMIT #{filter.pageSize} OFFSET #{filter.offset}
+    </select>
+
+    <select id="selectOwned" resultMap="TicketProjectionMap">
+        SELECT <include refid="projectionColumns"/>
+        <include refid="ownedJoins"/>
+        WHERE t.id = #{ticketId}
+          AND o.user_id = #{userId}
+    </select>
+
+    <select id="hasInvalidOwned" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            <include refid="ownedJoins"/>
+            WHERE o.user_id = #{filter.userId}
+              AND (
+                  t.status NOT IN (0, 1, 2)
+                  OR o.status NOT IN (0, 1, 2, 3, 4, 5)
+                  OR t.id IS NULL
+                  OR oi.id IS NULL
+                  OR o.id IS NULL
+                  OR s.id IS NULL
+                  OR m.id IS NULL
+                  OR h.id IS NULL
+                  OR ss.id IS NULL
+                  OR se.id IS NULL
+                  OR s.end_time IS NULL
+                  OR (t.status = 0 AND o.status NOT IN (1, 4))
+              )
+        )
+    </select>
+</mapper>

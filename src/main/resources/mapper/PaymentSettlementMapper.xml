@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.PaymentSettlementMapper">
+    <insert id="insertTicket">
+        INSERT INTO ticket(id,status,order_item_id,ticket_code,create_time,update_time)
+        VALUES(#{ticket.id},#{ticket.status},#{ticket.orderItemId},#{ticket.ticketCode},#{ticket.createTime},#{ticket.updateTime})
+    </insert>
+</mapper>

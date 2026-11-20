@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.ScreeningMapper">
+    <resultMap id="ScreeningResultMap" type="io.github.chenforegone.encoreticket.model.entity.Screening">
+        <id column="id" property="id"/>
+        <result column="price" property="price"/>
+        <result column="movie_id" property="movieId"/>
+        <result column="hall_id" property="hallId"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="admission_open_time" property="admissionOpenTime"/>
+        <result column="duration_minutes_snapshot" property="durationMinutesSnapshot"/>
+        <result column="turnaround_minutes_snapshot" property="turnaroundMinutesSnapshot"/>
+        <result column="sale_start_time" property="saleStartTime"/>
+        <result column="sale_end_time" property="saleEndTime"/>
+        <result column="status" property="status"
+                javaType="io.github.chenforegone.encoreticket.model.enums.ScreeningStatus"/>
+        <result column="create_time" property="createTime"/>
+        <result column="version" property="version"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectPublicByMovieId" resultMap="ScreeningResultMap">
+        SELECT s.id, s.price, s.movie_id, s.hall_id, s.start_time, s.end_time,
+               s.duration_minutes_snapshot, s.turnaround_minutes_snapshot,
+               s.sale_start_time, s.sale_end_time, s.admission_open_time, s.status, s.version, s.create_time, s.update_time
+        FROM screening s
+        INNER JOIN movie m ON m.id = s.movie_id
+        INNER JOIN hall h ON h.id = s.hall_id
+        WHERE s.movie_id = #{movieId}
+          AND m.status = 0 AND h.status = 0
+          AND s.status IN (0, 1)
+          AND s.sale_end_time &gt; DATE_ADD(UTC_TIMESTAMP(), INTERVAL 8 HOUR)
+        ORDER BY s.start_time ASC, s.id ASC
+    </select>
+    <select id="countOverlap" resultType="long">
+        SELECT COUNT(*) FROM screening
+        WHERE hall_id = #{hallId} AND status != 3
+          <if test="excludedId != null">AND id != #{excludedId}</if>
+          AND start_time &lt; #{occupiedEnd}
+          AND TIMESTAMPDIFF(SECOND, #{start}, end_time) + turnaround_minutes_snapshot * 60 &gt; 0
+    </select>
+    <select id="countOrders" resultType="long">
+        SELECT COUNT(*) FROM orders WHERE screening_id = #{id}
+    </select>
+    <select id="countActiveOrders" resultType="long">
+        SELECT COUNT(*) FROM orders WHERE screening_id = #{id} AND status IN (0, 1, 4)
+    </select>
+    <select id="countOccupiedSeats" resultType="long">
+        SELECT COUNT(*) FROM screening_seat WHERE screening_id = #{id} AND (status IN (1, 2) OR order_id IS NOT NULL)
+    </select>
+    <select id="countAvailableSeats" resultType="long">
+        SELECT COUNT(*) FROM screening_seat ss
+        JOIN screening s ON s.id = ss.screening_id
+        JOIN seat st ON st.id = ss.seat_id AND st.hall_id = s.hall_id AND st.status = 0
+        WHERE ss.screening_id = #{id} AND ss.status = 0 AND ss.order_id IS NULL
+    </select>
+    <select id="countHallReferences" resultType="long">
+        SELECT COUNT(*) FROM screening WHERE hall_id = #{hallId} AND status NOT IN (3, 4)
+    </select>
+    <select id="countSeatReferences" resultType="long">
+        SELECT COUNT(*) FROM screening_seat ss JOIN screening s ON s.id = ss.screening_id
+        WHERE ss.seat_id = #{seatId} AND s.status NOT IN (3, 4)
+    </select>
+    <update id="replaceWaitSale">
+        UPDATE screening SET movie_id = #{value.movieId}, hall_id = #{value.hallId}, price = #{value.price},
+          start_time = #{value.startTime}, end_time = #{value.endTime},
+          duration_minutes_snapshot = #{value.durationMinutesSnapshot},
+          turnaround_minutes_snapshot = #{value.turnaroundMinutesSnapshot},
+          sale_start_time = #{value.saleStartTime}, sale_end_time = #{value.saleEndTime},
+          admission_open_time = #{value.admissionOpenTime},
+          version = version + 1, update_time = UTC_TIMESTAMP()
+        WHERE id = #{value.id} AND version = #{expectedVersion} AND status = 0 AND sale_start_time &gt; #{now}
+    </update>
+    <update id="changeStatus">
+        UPDATE screening SET status = #{to}, version = version + 1, update_time = UTC_TIMESTAMP()
+        <if test="saleStart != null">, sale_start_time = #{saleStart}</if>
+        WHERE id = #{id} AND version = #{version} AND status = #{from}
+        <choose>
+            <when test="to == 1">AND sale_end_time &gt; #{now} AND end_time &gt; #{now}</when>
+            <when test="to == 4">AND end_time &lt;= #{now}</when>
+            <otherwise>AND end_time &gt; #{now}</otherwise>
+        </choose>
+    </update>
+    <update id="claimForClose">
+        UPDATE screening SET version = version + 1, update_time = UTC_TIMESTAMP()
+        WHERE id = #{id} AND version = #{version} AND status IN (0, 2) AND end_time &gt; #{now}
+    </update>
+    <update id="finishClose">
+        UPDATE screening SET status = 3, update_time = UTC_TIMESTAMP()
+        WHERE id = #{id} AND version = #{version} AND status IN (0, 2) AND end_time &gt; #{now}
+    </update>
+</mapper>

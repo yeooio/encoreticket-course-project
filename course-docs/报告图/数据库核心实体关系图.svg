@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="950" viewBox="0 0 1500 950"><style>text{font-family:Microsoft YaHei,sans-serif;fill:#222;font-size:22px}.small{font-size:18px}.name{font-size:23px;font-weight:bold}rect{fill:white;stroke:#222;stroke-width:2}path{fill:none;stroke:#333;stroke-width:2}</style>
+<path d="M310 120 H415 M635 120 H740 M850 175 V270 M310 330 H415 M635 330 H740 M525 390 V495 M850 390 V495 M635 555 H740 M850 615 V720 M1225 390 V495 M960 300 H1040 V680 H1225 V720"/>
+<g class="small"><text x="330" y="110">1</text><text x="395" y="110">N</text><text x="660" y="110">N</text><text x="720" y="110">1</text><text x="862" y="220">1 → N</text><text x="330" y="320">1</text><text x="395" y="320">N</text><text x="660" y="320">1</text><text x="720" y="320">N</text><text x="537" y="445">1 → N</text><text x="862" y="445">1 → N</text><text x="660" y="545">1</text><text x="720" y="545">N</text><text x="862" y="670">1 → 0..1</text><text x="1237" y="445">1 → N</text><text x="1053" y="663">1 → N</text></g>
+<g transform="translate(90 65)"><rect width="220" height="110"/><text class="name" x="110" y="36" text-anchor="middle">角色 role</text><text class="small" x="15" y="75">PK id · role_code</text></g>
+<g transform="translate(415 65)"><rect width="220" height="110"/><text class="name" x="110" y="36" text-anchor="middle">用户角色 user_role</text><text class="small" x="15" y="75">user_id · role_id</text></g>
+<g transform="translate(740 65)"><rect width="220" height="110"/><text class="name" x="110" y="36" text-anchor="middle">用户 sys_user</text><text class="small" x="15" y="75">PK id · username</text></g>
+<g transform="translate(90 270)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">电影 movie</text><text class="small" x="15" y="78">PK id · title</text></g>
+<g transform="translate(415 270)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">场次 screening</text><text class="small" x="15" y="78">movie_id · hall_id</text></g>
+<g transform="translate(740 270)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">订单 orders</text><text class="small" x="15" y="78">user_id · screening_id</text></g>
+<g transform="translate(1115 270)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">影厅 hall</text><text class="small" x="15" y="78">PK id · hall_no</text></g>
+<g transform="translate(415 495)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">场次座位</text><text class="small" x="15" y="78">screening_id · seat_id</text></g>
+<g transform="translate(740 495)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">订单明细</text><text class="small" x="15" y="78">order_id · 座位ID</text></g>
+<g transform="translate(1115 495)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">座位 seat</text><text class="small" x="15" y="78">PK id · hall_id</text></g>
+<g transform="translate(740 720)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">票券 ticket</text><text class="small" x="15" y="78">PK id · order_item_id</text></g>
+<g transform="translate(1115 720)"><rect width="220" height="120"/><text class="name" x="110" y="38" text-anchor="middle">支付 payment</text><text class="small" x="15" y="70">PK id · order_id</text><text class="small" x="15" y="96">退款关联支付记录</text></g>
+<text x="75" y="900" class="small">说明：逻辑关系示意，未列出全部关联；数据库不建立物理外键。支付及退款的基数见配套文字说明。</text></svg>
+
+
+
+
+

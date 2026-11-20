@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.MovieMapper">
+
+    <resultMap id="MovieResultMap" type="io.github.chenforegone.encoreticket.model.entity.Movie">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="release_date" property="releaseDate"/>
+        <result column="duration_minutes" property="durationMinutes"/>
+        <result column="publish_at" property="publishAt"/>
+        <result column="status" property="status"
+                javaType="io.github.chenforegone.encoreticket.model.enums.MovieStatus"/>
+        <result column="version" property="version"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="MovieColumns">
+        id, title, description, release_date, duration_minutes, publish_at, status, version, create_time, update_time
+    </sql>
+
+    <select id="selectMoviePage" resultMap="MovieResultMap">
+        SELECT
+        <include refid="MovieColumns"/>
+        FROM movie
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="title != null and title != ''">
+                AND title LIKE CONCAT(
+                    REPLACE(REPLACE(REPLACE(#{title}, '!', '!!'), '%', '!%'), '_', '!_'),
+                    '%'
+                ) ESCAPE '!'
+            </if>
+            <if test="releaseDateFrom != null">
+                AND release_date &gt;= #{releaseDateFrom}
+            </if>
+            <if test="releaseDateTo != null">
+                AND release_date &lt;= #{releaseDateTo}
+            </if>
+            <if test="publishAtFrom != null">
+                AND publish_at &gt;= #{publishAtFrom}
+            </if>
+            <if test="publishAtTo != null">
+                AND publish_at &lt;= #{publishAtTo}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'title'">title</when>
+            <when test="sortBy == 'publishAt'">publish_at</when>
+            <when test="sortBy == 'createTime'">create_time</when>
+            <otherwise>release_date</otherwise>
+        </choose>
+        <choose>
+            <when test="sortOrder == 'desc'">DESC</when>
+            <otherwise>ASC</otherwise>
+        </choose>, id ASC
+    </select>
+
+    <update id="publishDueMovies">
+        UPDATE movie
+        SET status = 0,
+            publish_at = NULL,
+            version = version + 1,
+            update_time = UTC_TIMESTAMP()
+        WHERE status = 1
+          AND publish_at IS NOT NULL
+          AND publish_at &lt;= #{now}
+        LIMIT #{limit}
+    </update>
+    <update id="claimForScheduling">
+        UPDATE movie SET version = version + 1, update_time = UTC_TIMESTAMP()
+        WHERE id = #{id} AND version = #{version}
+    </update>
+    <select id="countScreeningsBeforeRelease" resultType="long">
+        SELECT COUNT(*) FROM screening WHERE movie_id = #{id} AND status != 3 AND start_time &lt; #{releaseDate}
+    </select>
+</mapper>

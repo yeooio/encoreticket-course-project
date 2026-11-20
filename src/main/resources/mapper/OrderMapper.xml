@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="io.github.chenforegone.encoreticket.mapper.OrderMapper">
+
+    <resultMap id="DueOrderResultMap" type="io.github.chenforegone.encoreticket.model.entity.Order">
+        <id column="id" property="id"/>
+        <result column="expires_at" property="expiresAt"/>
+    </resultMap>
+
+    <resultMap id="ClaimedSeatResultMap" type="io.github.chenforegone.encoreticket.model.entity.ScreeningSeat">
+        <id column="id" property="id"/>
+        <result column="screening_id" property="screeningId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="status" property="status"
+                javaType="io.github.chenforegone.encoreticket.model.enums.ScreeningSeatStatus"/>
+    </resultMap>
+
+    <select id="selectDueOrders" resultMap="DueOrderResultMap">
+        SELECT id, expires_at FROM (
+            SELECT o.id, o.screening_id,
+                LEAST(o.expires_at, DATE_ADD(o.create_time, INTERVAL 15 MINUTE),
+                    DATE_SUB(s.sale_end_time, INTERVAL 8 HOUR)) AS expires_at
+            FROM orders o JOIN screening s ON s.id = o.screening_id
+            WHERE o.status = 0
+        ) due
+        WHERE expires_at &lt;= #{now}
+        <if test="screeningId != null">AND screening_id = #{screeningId}</if>
+        <if test="afterExpiry != null">
+            AND (expires_at &gt; #{afterExpiry} OR (expires_at = #{afterExpiry} AND id &gt; #{afterId}))
+        </if>
+        ORDER BY expires_at, id LIMIT #{limit}
+    </select>
+
+    <select id="selectOrderItemSeatIds" resultType="java.lang.Long">
+        SELECT screening_seat_id FROM order_item WHERE order_id = #{orderId} ORDER BY screening_seat_id
+    </select>
+
+    <select id="selectClaimedSeatsForUpdate" resultMap="ClaimedSeatResultMap">
+        SELECT id, screening_id, order_id, status FROM screening_seat
+        WHERE order_id = #{orderId} ORDER BY id FOR UPDATE
+    </select>
+
+    <update id="expireIfDue">
+        UPDATE orders SET status = 3, version = version + 1, update_time = #{now}
+        WHERE id = #{orderId} AND status = 0
+          AND LEAST(expires_at, DATE_ADD(create_time, INTERVAL 15 MINUTE),
+              (SELECT DATE_SUB(s.sale_end_time, INTERVAL 8 HOUR) FROM screening s WHERE s.id = orders.screening_id)) &lt;= #{now}
+    </update>
+
+    <update id="releaseHeldSeats">
+        UPDATE screening_seat SET status = 0, order_id = NULL, update_time = #{now}
+        WHERE order_id = #{orderId} AND screening_id = #{screeningId} AND status = 1
+    </update>
+</mapper>
